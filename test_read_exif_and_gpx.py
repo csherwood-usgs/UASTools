@@ -5,15 +5,10 @@ from PIL import Image, ExifTags
 from datetime import datetime
 import pandas as pd
 from lxml import etree
-
-namespace = {'def': 'http://www.topografix.com/GPX/1/1'}
-
 %matplotlib inline
 %config InlineBackend.figure_format = 'svg'
-t = np.linspace(0, 20, 500)
 
-plt.plot(t, np.sin(t))
-plt.show()
+namespace = {'def': 'http://www.topografix.com/GPX/1/1'}
 
 # get list of .gpx files
 path = '.'
@@ -29,15 +24,19 @@ elist = tree.xpath('./def:trk//def:trkpt',namespaces=namespace)
 lonlat = [e.values() for e in elist]
 lonlat = np.array(lonlat,dtype="float")
 print(lonlat[0])
-print(elist[5].find('ele').text)
-print(np.shape(elist))
+print(np.shape(lonlat))
 
 # This works
 elist = tree.xpath('./def:trk//def:trkpt//def:time',namespaces=namespace)
 fmt = '%Y-%m-%dT%H:%M:%S-04:00' #2017-05-04T14:14:12-04:00
 time = [datetime.strptime(e.text, fmt) for e in elist]
-print time[0], np.shape(time)
-print(np.shape(elist))
+print(time[0],time[-1], np.shape(time))
+
+
+plt.plot(lonlat[:,1],lonlat[:,0])
+plt.show()
+
+
 
 # This works
 elist = tree.xpath('./def:trk//def:trkpt//def:ele',namespaces=namespace)
@@ -59,6 +58,7 @@ flist=[os.path.join(path,f) for f in os.listdir(path) if ( f.endswith('.jpg') or
 for f in flist:
     t=Image.open(f)._getexif()[36867]
     print(f,t)
+
 
 
 # here is how to get all of the exif info:
