@@ -4,9 +4,7 @@
 #
 # Usage:
 # > activate IOOS3 (or other conda environment with sys, os, numpy, and pillow)
-# (IOOS3) > python GPS_list_from_EXIF.py
-# GPS_list_from_EXIF.py
-# Enter the target directory: path_with_JPG_or_jpg_files
+# (IOOS3) > python GPS_list_from_EXIF.py target_directory
 #
 # A file called image_locations.csv will be created (or clobbered) in this directory
 #
@@ -66,8 +64,7 @@ def get_gps_data(i):
     return lat,lon,alt
 
 def main():
-    print(argv[0])
-    # path=input("Enter the target directory: ")
+    print(sys.argv[0])
     argc = len(sys.argv)
     if argc<2:
         print("Need a target directory as a command-line argument.")
