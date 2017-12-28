@@ -4,7 +4,12 @@
 #
 # Usage:
 # > activate IOOS3 (or other conda environment with sys, os, numpy, and pillow)
-# > python GPS_list_from_EXIF.py
+# (IOOS3) > python GPS_list_from_EXIF.py
+# GPS_list_from_EXIF.py
+# Enter the target directory: path_with_JPG_or_jpg_files
+#
+# A file called image_locations.csv will be created (or clobbered) in this directory
+#
 # csherwood@usgs.gov
 #
 # Part of this was adapted from https://www.codingforentrepreneurs.com/blog/extract-gps-exif-images-python/
@@ -61,8 +66,16 @@ def get_gps_data(i):
     return lat,lon,alt
 
 def main():
-    print('GPS_list_from_EXIF.py')
-    path=input("Enter the target directory: ")
+    print(argv[0])
+    # path=input("Enter the target directory: ")
+    argc = len(sys.argv)
+    if argc<2:
+        print("Need a target directory as a command-line argument.")
+        sys.exit(1)
+    if argc>2:
+        print("Dont understand more than one command-line argument.")
+        sys.exit(1)
+    path = sys.argv[1]
     print("Looking in: "+path)
     files = [f for f in os.listdir(path) if ( f.endswith('.jpg') or f.endswith('.JPG'))]
     if not files:
