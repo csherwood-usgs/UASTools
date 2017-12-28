@@ -1,15 +1,16 @@
 % compare_DEM_with_transects - Script to compare DEM
 % location of input and output files
 dv = 'd:'
-dn = '\crs\proj\2017_Ontario\2017-07-13_Sodus_North'
+%dn = '\crs\proj\2017_Ontario\2017-07-13_Sodus_North'
+dn = '\crs\proj\2017_Ontario\2017-07-12_Lake_Bluffs_v3'
 
 % filenames for transect points and file exported from Global Mapper, and
 % desired output filename
-fn_trans = '2017-07-13-Sodus_North_trans.txt'
-fn_dem = 'sodus_north_dem_values_at_transect_points.csv'
+fn_trans = '2017-07-12-13_Crescent_Bar_Lake_Bluffs_trans.txt'
+fn_dem = '2017-07-13_Crescent_Bar_Lake_Bluffs_DEM_elevations_at_transect_points.txt'
 fn_out = 'transect_minus_dem.txt'
 % text for graph title
-ttext = 'Sodus North'
+ttext = 'Lake Bluff / Crescent Bar'
 
 fp_trans = fullfile(dv,dn,fn_trans)
 fp_dem = fullfile(dv,dn,fn_dem)
@@ -108,7 +109,7 @@ green = [.2 .7 .2]
 red = [.7 .2 .2]
 
 % remove points with huge diff (usually missing from DEM)
-dz(find(abs(dz)>5))=NaN;
+dz(find(abs(dz)>1))=NaN;
 set(0,'defaulttextfontsize',24)
 set(0,'defaultaxesfontsize',18)
 
@@ -116,7 +117,7 @@ stats=nandist(dz);
 figure(1);clf
 h=histogram(dz,[-.51:.02:.51],'normalization','probability');
 set(h,'facecolor',gray)
-xlim([-.205 .205])
+xlim([-.505 .505])
 ylim([0 .4])
 % ylabel('\itN')
 ylabel('Fraction of Observations')
