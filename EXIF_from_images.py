@@ -1,18 +1,19 @@
 
 # EXIF_from_images.py
 # Read all of the UAS image files in a directory.
-# Generate a .csv file with name, time, lat, lon, (relative) altitude,
+# Generate a .csv file with selected EXIF info.
 #
 # Usage:
-# > activate IOOS3 (or other conda environment with sys, os, numpy, and pillow)
-# (IOOS3) > python GPS_list_from_DJI.py target_directory
+# > activate IOOS3 (or other conda environment with sys, os, numpy, datetime, and pillow packages)
+# (IOOS3) > python EXIF_from_images.py target_directory
 #
-# A file called image_locations.csv will be created (or clobbered) in this directory
+# A file called image_info.csv will be created (or clobbered) in this target_directory
+# and a short statistical summary of some of the EXIF data will be displayed.
 #
 # csherwood@usgs.gov
 #
 # Part of this was adapted from https://www.codingforentrepreneurs.com/blog/extract-gps-exif-images-python/
-# Thanks to the DJI Mavic forum for pointing out that this metadata is in the XMP segment of the image
+# Thanks to the DJI Mavic forum for pointing out that some metadata is in the XMP segment of the image.
 
 import sys
 import os
@@ -24,6 +25,14 @@ from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 
 def latlon_from_gps_data(gps_data):
+    """
+    Extract lat, lon, and altitude from dict
+
+    Input:
+        gps_data - dict read from EXIF by get_gps_data()
+    Returns:
+        lat, lon, alt - floating point values in degrees, degrees, and meters
+    """
     lat = np.nan
     lon = np.nan
     alt = np.nan
@@ -49,6 +58,16 @@ def latlon_from_gps_data(gps_data):
         return np.nan, np.nan, np.nan
 
 def get_gps_data(i):
+    """
+    Extract lat, lon, and altitude from a PIL image object
+    This calls latlon_from_gps_data to decode the dict values
+    Uses the PIL package.
+
+    Input:
+        i - image object returned by i=Image.open(imgpath)
+    Returns:
+        lat, lon, alt - floating point values in degrees, degrees, and meters
+    """
     info = i._getexif()
     exif_data={}
     lat = np.nan
@@ -68,8 +87,15 @@ def get_gps_data(i):
 
 def get_exif_data(imgpath):
     """
-    Returns a dictionary from the exif data of an PIL Image item. Also converts the GPS Tags
+    Get a dict of all of the metadata in the EXIF portion of an image.
+    Returns a dictionary of the exif data. Also converts the GPS Tags.
     https://www.codingforentrepreneurs.com/blog/extract-gps-exif-images-python/
+    Uses the PIL package.
+
+    Input:
+        imgpath - a file Path
+    Returns:
+        exif_data - a dict of the EXIF contents
     """
     exif_data = {}
     try:
@@ -98,6 +124,12 @@ def get_exif_data(imgpath):
 def get_camera_settings(impath):
     """
     Decode some standard camera info from the EXIF portion of the images
+    PIL package required in call to get_exif_data()
+
+    Input:
+        impath - file path to an images
+    Returns:
+        mdict - dict of selected, decoded metadata from the EXIF
     """
     exif_data = get_exif_data(impath)
 
@@ -131,7 +163,14 @@ def get_camera_settings(impath):
 
 def get_dji_meta( filepath ):
     """
-    Returns a dict with DJI-specific metadata stored in the XMB portion of the image
+    Returns a dict with DJI-specific metadata stored in the XMB portion of the image.
+    No packages required. This brute force approach might obviate the need for the PIL
+    package in other routines above.
+
+    Input:
+        filepath - file path of images
+    Returns:
+        xmp_dict - dict with selected metadata info stored on some DJI images
     """
 
     # list of metadata tags
@@ -159,6 +198,9 @@ def get_dji_meta( filepath ):
         xmp_dict.update({m : val})
 
     return xmp_dict
+
+
+
 
 def main():
     print(sys.argv[0])
@@ -241,7 +283,8 @@ def main():
             xcount = xcount+1
         except:
             altr_l.append(np.NaN)
-            print('Missing XMP metadata in:', fpath )
+            # next line is helpful with DJI images, but annoying with Ricoh images
+            #print('Missing XMP metadata in:', fpath )
 
         # get lat/lon
         i = Image.open(fpath)
@@ -309,10 +352,11 @@ def main():
     print("  Latest: ",max(dt_l).strftime('%Y:%m:%d %H:%M:%S'))
     print("\n   North:  {0:.5f} South:  {1:.5f}".format(np.nanmax(lat_a),np.nanmin(lat_a)))
     print("    West: {0:.5f}  East: {1:.5f}".format(np.nanmin(lon_a),np.nanmax(lon_a)))
-    print("\nAbsolute Altitude Min: {0:5.1f} Max: {1:5.1f} Median: {2:5.1f} m"\
+    print("\n        GPS Altitude Min: {0:5.1f} Max: {1:5.1f} Median: {2:5.1f} m"\
         .format(np.nanmin(alta_a),np.nanmax(alta_a),np.nanmedian(alta_a)))
-    print("Relative Altitude Min: {0:5.1f} Max: {1:5.1f} Median: {2:5.1f} m"\
-        .format(np.nanmin(altr_a),np.nanmax(altr_a),np.nanmedian(altr_a)))
+    if (any(~np.isnan(altr_a))):
+        print("Relative Altitude Min: {0:5.1f} Max: {1:5.1f} Median: {2:5.1f} m"\
+            .format(np.nanmin(altr_a),np.nanmax(altr_a),np.nanmedian(altr_a)))
     print("\n    ISO:   Min:  {0:5.0f} Max:  {1:5.0f} Median:  {2:5.0f}"\
         .format(np.nanmin(iso_a),np.nanmax(iso_a),np.nanmedian(iso_a)))
     print(" F-stop:   Min:  {0:5.1f} Max:  {1:5.1f} Median:  {2:5.1f}"\
