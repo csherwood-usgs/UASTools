@@ -72,7 +72,6 @@ def get_exif_data(imgpath):
     https://www.codingforentrepreneurs.com/blog/extract-gps-exif-images-python/
     """
     exif_data = {}
-    print("Trying to open ",imgpath)
     try:
         image=Image.open(imgpath)
     except:
@@ -92,7 +91,7 @@ def get_exif_data(imgpath):
             else:
                 exif_data[decoded] = value
     else:
-        print("No info in ",imgpath)
+        print("No GPS info in ",imgpath)
     image.close()
     return exif_data
 
@@ -101,6 +100,7 @@ def get_camera_settings(impath):
     Decode some standard camera info from the EXIF portion of the images
     """
     exif_data = get_exif_data(impath)
+
     mdict = {}
     mdict.update( {'ISOSpeedRatings' : float( exif_data['ISOSpeedRatings'])} )
     val = exif_data['ExposureTime']
@@ -114,12 +114,12 @@ def get_camera_settings(impath):
     # According to https://www.dpreview.com/forums/post/54376235
     # ShutterSpeedValue is defined as an APEX (Additive System of Photographic Exposure) value, where:
     # ShutterSpeed=-log2(ExposureTime).
-    val = exif_data['ShutterSpeedValue']
-    fval = float(val[0])/float(val[1])
-    mdict.update( {'ShutterSpeedValue' : fval } )
+    # But the Ricohs don't have it, and it is not needed.
+    # val = exif_data['ShutterSpeedValue']
+    # fval = float(val[0])/float(val[1])
+    # mdict.update( {'ShutterSpeedValue' : fval } )
 
     val = exif_data['DateTime']
-    print(val)
     dt = datetime.strptime(val,'%Y:%m:%d %H:%M:%S')
     mdict.update( {'datetime' : dt } )
 
@@ -176,20 +176,13 @@ def main():
         print("No jpg files found.")
         sys.exit(1)
 
-    outfile = 'image_locations.csv'
-    outpath = os.path.join(path,outfile)
-    try:
-        fout = open(outpath, 'w')
-    except:
-        print("Could not open "+outpath)
-        sys.exit(1)
-
     # initialize counters
     fcount = 0
     xcount = 0
     mcount = 0
     ecount = 0
     # initialize data lists and arrays
+    fpath_l = []
     dt_l = []
     date_l = []
     time_l = []
@@ -200,39 +193,55 @@ def main():
     fstop_l = []
     exptime_l = []
     iso_l = []
-    shutterspd_l = []
 
     files = [f for f in os.listdir(path) if ( f.endswith('.jpg') or f.endswith('.JPG'))]
-    print(os.path.join(path,files[0]))
     for file in files:
         fcount = fcount+1
         fpath = os.path.join(path,file)
-
+        fpath_l.append( fpath )
         # check to make sure there is EXIF info
         try:
             mdict = get_camera_settings(fpath)
-            print(mdict)
-            dt_l.append( mdict['datetime'] )
-            date_l.append( mdict['Date'] )
-            time_l.append( mdict['Time'] )
-            fstop_l.append( mdict['FNumber'] )
-            exptime_l.append( mdict['ExposureTime'])
-            shutterspd_l.append( mdict['ShutterSpeedValue'])
-            ecount = ecount+1
+            try:
+                dt_l.append( mdict['datetime'] )
+                date_l.append( mdict['Date'] )
+                time_l.append( mdict['Time'] )
+            except:
+                dt_l.append("")
+                date_l.append("")
+                time_l.append("")
+                print("No date or time in:",fpath)
+
+            try:
+                iso_l.append( mdict['ISOSpeedRatings'] )
+                fstop_l.append( mdict['FNumber'] )
+                exptime_l.append( mdict['ExposureTime'])
+                ecount = ecount+1
+            except:
+                iso_l.append(np.NaN)
+                fstop_l.append(np.NaN)
+                exptime_l.append(np.NaN)
+                print('Missing camera metadata in:',fpath)
+
         except:
-            print('No camera metadata in:',fpath)
+            dt_l.append("")
+            date_l.append("")
+            time_l.append("")
+            iso_l.append(np.NaN)
+            fstop_l.append(np.NaN)
+            exptime_l.append(np.NaN)
+            print("No EXIF data in ",fpath)
 
         # look for XMP metadata (DJI images)
         altr = np.NaN
         try:
             xmp_dict = get_dji_meta( fpath )
             altr = xmp_dict['RelativeAltitude']
-            print("Altr:",altr)
             altr_l.append( altr )
             xcount = xcount+1
         except:
             altr_l.append(np.NaN)
-            print('No XMP metadata from:', fpath )
+            print('Missing XMP metadata in:', fpath )
 
         # get lat/lon
         i = Image.open(fpath)
@@ -249,17 +258,72 @@ def main():
                 lat_l.append( np.NaN )
                 lon_l.append( np.NaN )
                 alta_l.append( np.NaN )
-                print('Could not find GPS data in:',fpath)
+                print('Missing GPS data in:',fpath)
 
             i.close()
         else:
-            print('Could not open ',fpath)
+            print('Could not open: ',fpath)
 
-    #fout.write('{0},{1:.8f},{2:.8f},{3:.1f}\n'.format(file,lat,lon,altr))
-    #print('{0},{1:.8f},{2:.8f},{3:.1f},{4:.1f}'.format(file,lat,lon,alt,altr))
+    # Summary statistics
+    dt_a = np.array( dt_l )
+    lat_a = np.array(lat_l)
+    lon_a = np.array(lon_l)
+    altr_a = np.array(altr_l)
+    alta_a = np.array(alta_l)
+    iso_a = np.array(iso_l)
+    fstop_a = np.array(fstop_l)
+    exptime_a = np.array(exptime_l)
 
+    # Best altitude: use relative altitude if available, otherwise absolute altitude
+    altb_a = np.NaN*np.ones_like(alta_a)
+    for i in range( len(alta_a) ):
+        altb_a[i]=altr_a[i]
+        if(np.isnan(altr_a[i])):
+            altb_a[i]=alta_a[i]
+
+    # Calculate exposure value. See https://en.wikipedia.org/wiki/Exposure_value
+    ev_a = np.log2( fstop_a**2 / exptime_a + np.log2( iso_a / 100.))
+
+    # Write out csv of file info
+    outfile = 'image_info.csv'
+    outpath = os.path.join(path,outfile)
+    try:
+        fout = open(outpath, 'w')
+    except:
+        print("Could not open "+outpath)
+        sys.exit(1)
+
+    fout.write("path,latitude (degrees N),longitude (degrees E),altitude (m),ISO,Fstop,1/exposure time (s),exposure value\n")
+    for i, p, in enumerate( fpath_l ):
+        # print('{0:},{1:.6f},{2:.6f},{3:.1f},{4:.0f},{5:.1f},{6:.1f},{7:.1f}'.\
+        #     format(p,lat_a[i],lon_a[i],altb_a[i],iso_a[i],fstop_a[i],1./exptime_a[i],ev_a[i]))
+        fout.write("{0:},{1:.6f},{2:.6f},{3:.1f},{4:.0f},{5:.1f},{6:.1f},{7:.1f}\n".\
+            format(p,lat_a[i],lon_a[i],altb_a[i],iso_a[i],fstop_a[i],1./exptime_a[i],ev_a[i]))
     fout.close()
-    print("File count:",fcount," with XMP data: ",xcount," with lat/lon data:",mcount,'with EXIF metadata: ',ecount)
+
+    print("\n\n**********************************************************************************")
+    print("EXIF_from_images.py run {}.".format( datetime.now().strftime('%Y:%m:%d %H:%M:%S')))
+    print("\nPath: ",path)
+    print("File count:",fcount," total, ",xcount," with XMP, ",mcount," with lat/lon, and ",ecount," with camera EXIF.")
+    print("\nEarliest: ",min(dt_l).strftime('%Y:%m:%d %H:%M:%S'))
+    print("  Latest: ",max(dt_l).strftime('%Y:%m:%d %H:%M:%S'))
+    print("\n   North:  {0:.5f} South:  {1:.5f}".format(np.nanmax(lat_a),np.nanmin(lat_a)))
+    print("    West: {0:.5f}  East: {1:.5f}".format(np.nanmin(lon_a),np.nanmax(lon_a)))
+    print("\nAbsolute Altitude Min: {0:5.1f} Max: {1:5.1f} Median: {2:5.1f} m"\
+        .format(np.nanmin(alta_a),np.nanmax(alta_a),np.nanmedian(alta_a)))
+    print("Relative Altitude Min: {0:5.1f} Max: {1:5.1f} Median: {2:5.1f} m"\
+        .format(np.nanmin(altr_a),np.nanmax(altr_a),np.nanmedian(altr_a)))
+    print("\n    ISO:   Min:  {0:5.0f} Max:  {1:5.0f} Median:  {2:5.0f}"\
+        .format(np.nanmin(iso_a),np.nanmax(iso_a),np.nanmedian(iso_a)))
+    print(" F-stop:   Min:  {0:5.1f} Max:  {1:5.1f} Median:  {2:5.1f}"\
+        .format(np.nanmin(fstop_a),np.nanmax(fstop_a),np.nanmedian(fstop_a)))
+    print("Shutter:   Min:  {0:5.0f} Max:  {1:5.0f} Median:  {2:5.0f}"\
+        .format(1./np.nanmin(exptime_a),1./np.nanmax(exptime_a),1./np.nanmedian(exptime_a)))
+    print("     EV:   Min:  {0:5.1f} Max:  {1:5.1f} Median:  {2:5.1f}"\
+        .format(np.nanmin(ev_a), np.nanmax(ev_a), np.nanmedian(ev_a)))
+    print("\n.csv list is in",outpath)
+    print("**********************************************************************************")
+
 
 if __name__ == "__main__":
     main()
