@@ -336,7 +336,7 @@ def main():
         print("Could not open "+outpath)
         sys.exit(1)
 
-    fout.write("path,year,month,day,hour,minute,second,latitude (degrees N),longitude (degrees E),altitude (m),ISO,Fstop,1/exposure time (s),exposure value\n")
+    fout.write("#path,year,month,day,hour,minute,second,latitude (degrees N),longitude (degrees E),altitude (m),ISO,Fstop,1/exposure time (s),exposure value\n")
     for i, p, in enumerate( fpath_l ):
         # print('{0:},{1:.6f},{2:.6f},{3:.1f},{4:.0f},{5:.1f},{6:.1f},{7:.1f}'.\
         #     format(p,lat_a[i],lon_a[i],altb_a[i],iso_a[i],fstop_a[i],1./exptime_a[i],ev_a[i]))
