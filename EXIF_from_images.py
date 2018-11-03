@@ -336,12 +336,12 @@ def main():
         print("Could not open "+outpath)
         sys.exit(1)
 
-    fout.write("path,latitude (degrees N),longitude (degrees E),altitude (m),ISO,Fstop,1/exposure time (s),exposure value\n")
+    fout.write("path,year,month,day,hour,minute,second,latitude (degrees N),longitude (degrees E),altitude (m),ISO,Fstop,1/exposure time (s),exposure value\n")
     for i, p, in enumerate( fpath_l ):
         # print('{0:},{1:.6f},{2:.6f},{3:.1f},{4:.0f},{5:.1f},{6:.1f},{7:.1f}'.\
         #     format(p,lat_a[i],lon_a[i],altb_a[i],iso_a[i],fstop_a[i],1./exptime_a[i],ev_a[i]))
-        fout.write("{0:},{1:.6f},{2:.6f},{3:.1f},{4:.0f},{5:.1f},{6:.1f},{7:.1f}\n".\
-            format(p,lat_a[i],lon_a[i],altb_a[i],iso_a[i],fstop_a[i],1./exptime_a[i],ev_a[i]))
+        fout.write("{0:},{1:},{2:.6f},{3:.6f},{4:.1f},{5:.0f},{6:.1f},{7:.1f},{8:.1f}\n".\
+            format(p,dt_l[i].strftime("%Y,%m,%d,%H,%M,%S"),lat_a[i],lon_a[i],altb_a[i],iso_a[i],fstop_a[i],1./exptime_a[i],ev_a[i]))
     fout.close()
 
     print("\n\n**********************************************************************************")
@@ -355,7 +355,7 @@ def main():
     print("\n        GPS Altitude Min: {0:5.1f} Max: {1:5.1f} Median: {2:5.1f} m"\
         .format(np.nanmin(alta_a),np.nanmax(alta_a),np.nanmedian(alta_a)))
     if (any(~np.isnan(altr_a))):
-        print("Relative Altitude Min: {0:5.1f} Max: {1:5.1f} Median: {2:5.1f} m"\
+        print("   Relative Altitude Min: {0:5.1f} Max: {1:5.1f} Median: {2:5.1f} m"\
             .format(np.nanmin(altr_a),np.nanmax(altr_a),np.nanmedian(altr_a)))
     print("\n    ISO:   Min:  {0:5.0f} Max:  {1:5.0f} Median:  {2:5.0f}"\
         .format(np.nanmin(iso_a),np.nanmax(iso_a),np.nanmedian(iso_a)))
